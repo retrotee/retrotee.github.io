@@ -1,0 +1,200 @@
+<html><head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"></script><style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #1a1b26;
+    font-family: "Courier New", monospace;
+    color: #a9b1d6;
+  }
+  #terminal {
+    height: 100%;
+    width: 100%;
+  }
+</style></head><body>
+<div id="terminal"></div>
+<script>
+const term = new Terminal({
+  cursorBlink: true,
+  cursorStyle: "block",
+  fontFamily: "Courier New, monospace",
+  fontSize: 14,
+  theme: {
+    background: "#1a1b26",
+    foreground: "#a9b1d6",
+    cursor: "#bb9af7"
+  }
+});
+
+term.open(document.getElementById("terminal"));
+
+function fitTerminal() {
+  const terminalElement = document.getElementById("terminal");
+  const styles = window.getComputedStyle(terminalElement);
+  const width = parseInt(styles.width, 10);
+  const height = parseInt(styles.height, 10);
+  term.resize(Math.floor(width / 9), Math.floor(height / 17));
+}
+
+fitTerminal();
+window.addEventListener("resize", fitTerminal);
+
+const startupMessage = [
+  "\r\n",
+  "\x1b[38;2;255;215;0m   ____      _             _            \x1b[0m\r\n",
+  "\x1b[38;2;255;215;0m  |  _ \\ ___| |_ _ __ ___ | |_ ___  ___ \x1b[0m\r\n",
+  "\x1b[38;2;255;215;0m  | |_) / _ \\ __| \"__/ _ \\| __/ _ \\/ _ \\\x1b[0m\r\n",
+  "\x1b[38;2;255;215;0m  |  _ <  __/ |_| | | (_) | ||  __/  __/\x1b[0m\r\n",
+  "\x1b[38;2;255;215;0m  |_| \\_\\___|\\__|_|  \\___/ \\__\\___|\\___|\x1b[0m\r\n",
+  "\r\n",
+  "\x1b[38;2;135;206;250mWelcome to retrotee\"s terminal!\x1b[0m\r\n",
+  "\x1b[38;2;152;251;152mUse 'help' to see all commands\x1b[0m\r\n",
+  "\r\n"
+];
+
+startupMessage.forEach(line => term.writeln(line));
+
+let currentLine = "";
+let cursorPosition = 0;
+const prompt = "retrotee@t:~$ ";
+let commandHistory = [];
+let historyIndex = -1;
+
+function newLine() {
+  if (currentLine.trim()) {
+    commandHistory.unshift(currentLine.trim());
+  }
+  historyIndex = -1;
+  currentLine = "";
+  cursorPosition = 0;
+  term.write("\r\n" + prompt);
+}
+
+newLine();
+
+const commands = {
+  about: () => {
+    term.writeln("Interests: Python, Minecraft, Geometry Dash, and Cars");
+    term.writeln("Favorite Cars: Apollo Intensa Emozione and Apollo Gumpert");
+    term.writeln("What I Code: AIs, automations, and more!");
+    term.writeln("Pronouns: He/Him");
+    term.writeln("Fun Fact: I am from Germany 🇩🇪");
+  },
+  clear: () => {
+    term.clear();
+  },
+  contact: () => {
+    term.writeln("GitHub:  @retrotee");
+    term.writeln("TikTok:  @retrotee2932");
+    term.writeln("YouTube: @retrotee_studios");
+  },
+  exit: () => {
+    term.writeln("Goodbye! Thanks for visiting retrotee\"s terminal.");
+    setTimeout(() => window.close(), 2000);
+  },
+  help: () => {
+    term.writeln("Available commands:");
+    Object.keys(commands).sort().forEach(cmd => {
+      term.writeln(`  ${cmd}`);
+    });
+  },
+  projects: () => {
+    term.writeln("Current projects:");
+    term.writeln("- New Encryption/Decryption System");
+    term.writeln("- AI PC Controller");
+    term.writeln("- Physics Game");
+  },
+  skills: () => {
+    term.writeln("Programming Skills:");
+    term.writeln("- Python");
+    term.writeln("- AI & Machine Learning (kinda)");
+    term.writeln("- Automation");
+  }
+};
+
+function moveCursor(direction) {
+  if (direction === "left" && cursorPosition > 0) {
+    cursorPosition--;
+    term.write("\b");
+  } else if (direction === "right" && cursorPosition < currentLine.length) {
+    cursorPosition++;
+    term.write(currentLine[cursorPosition - 1]);
+  }
+}
+
+function insertChar(char) {
+  currentLine = currentLine.slice(0, cursorPosition) + char + currentLine.slice(cursorPosition);
+  cursorPosition++;
+  term.write(currentLine.slice(cursorPosition - 1));
+  for (let i = cursorPosition; i < currentLine.length; i++) {
+    term.write("\b");
+  }
+}
+
+function deleteChar() {
+  if (cursorPosition > 0) {
+    currentLine = currentLine.slice(0, cursorPosition - 1) + currentLine.slice(cursorPosition);
+    cursorPosition--;
+    term.write("\b \b");
+    term.write(currentLine.slice(cursorPosition));
+    for (let i = cursorPosition; i < currentLine.length; i++) {
+      term.write("\b");
+    }
+  }
+}
+
+function setLine(newLine) {
+  const currentPrompt = term.buffer.active.getLine(term.buffer.active.cursorY).translateToString();
+  const startPosition = currentPrompt.indexOf(prompt) + prompt.length;
+  term.write("\r" + currentPrompt.slice(0, startPosition));
+  for (let i = startPosition; i < currentPrompt.length; i++) {
+    term.write(" ");
+  }
+  term.write("\r" + currentPrompt.slice(0, startPosition));
+  term.write(newLine);
+  currentLine = newLine;
+  cursorPosition = newLine.length;
+}
+
+term.onKey(e => {
+  const ev = e.domEvent;
+  const printable = !ev.altKey && !ev.ctrlKey && !ev.metaKey;
+
+  if (ev.keyCode === 13) { // Enter key
+    term.write("\r\n");
+    const command = currentLine.trim().toLowerCase();
+    if (command) {
+      if (commands[command]) {
+        commands[command]();
+      } else {
+        term.writeln(`Command not found: ${command}`);
+      }
+    }
+    newLine();
+  } else if (ev.keyCode === 8) { // Backspace
+    deleteChar();
+  } else if (ev.keyCode === 37) { // Left arrow
+    moveCursor("left");
+  } else if (ev.keyCode === 39) { // Right arrow
+    moveCursor("right");
+  } else if (ev.keyCode === 38) { // Up arrow
+    if (historyIndex < commandHistory.length - 1) {
+      historyIndex++;
+      setLine(commandHistory[historyIndex]);
+    }
+  } else if (ev.keyCode === 40) { // Down arrow
+    if (historyIndex > 0) {
+      historyIndex--;
+      setLine(commandHistory[historyIndex]);
+    } else if (historyIndex === 0) {
+      historyIndex = -1;
+      setLine("");
+    }
+  } else if (printable) {
+    insertChar(e.key);
+  }
+});
+</script>
+</body></html>
